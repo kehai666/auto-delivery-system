@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>资料自助领取</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        .logo { font-size: 48px; margin-bottom: 10px; }
+        h1 { color: #fff; font-size: 22px; margin-bottom: 6px; }
+        .sub { color: rgba(255,255,255,0.4); font-size: 14px; margin-bottom: 30px; }
+
+        .form-group { margin-bottom: 16px; text-align: left; }
+        label { color: rgba(255,255,255,0.6); font-size: 13px; display: block; margin-bottom: 6px; }
+        select, input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.3s;
+        }
+        select option { background: #1a1a2e; color: #fff; }
+        select:focus, input:focus { border-color: #6c5ce7; background: rgba(108,92,231,0.1); }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #6c5ce7, #a363d9);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(108,92,231,0.4); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .result {
+            margin-top: 24px;
+            padding: 20px;
+            background: rgba(46,204,113,0.1);
+            border: 1px solid rgba(46,204,113,0.3);
+            border-radius: 12px;
+            display: none;
+        }
+        .result.show { display: block; animation: fadeIn 0.5s; }
+        .result .label { color: rgba(255,255,255,0.5); font-size: 12px; margin-bottom: 4px; }
+        .result .value {
+            background: rgba(0,0,0,0.3);
+            padding: 10px 14px;
+            border-radius: 8px;
+            color: #2ecc71;
+            font-size: 14px;
+            word-break: break-all;
+            margin-bottom: 12px;
+        }
+        .result .copy-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .result .copy-btn:hover { background: rgba(255,255,255,0.2); }
+
+        .error {
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(231,76,60,0.1);
+            border: 1px solid rgba(231,76,60,0.3);
+            border-radius: 10px;
+            color: #e74c3c;
+            font-size: 14px;
+            display: none;
+        }
+        .error.show { display: block; animation: fadeIn 0.3s; }
+
+        .hint { color: rgba(255,255,255,0.3); font-size: 12px; margin-top: 10px; }
+        .mode-hint {
+            background: rgba(108,92,231,0.1);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">📦</div>
+        <h1>资料自助领取</h1>
+        <p class="sub">拍下商品后，输入验证信息即可领取下载链接</p>
+
+        <div id="stepForm">
+            <div class="form-group">
+                <label>选择商品</label>
+                <select id="productSelect" onchange="onProductChange()">
+                    <option value="">请选择...</option>
+                </select>
+            </div>
+
+            <div id="verifyArea" style="display:none">
+                <div id="modeHint" class="mode-hint"></div>
+                <div class="form-group">
+                    <label id="inputLabel">验证信息</label>
+                    <input type="text" id="codeInput" placeholder="" maxlength="20">
+                </div>
+                <button class="btn" id="claimBtn" onclick="claim()">领取资料</button>
+                <p class="hint">每个订单/取货码仅限领取一次</p>
+            </div>
+        </div>
+
+        <div id="resultArea" class="result">
+            <div style="font-size:36px;margin-bottom:8px">✅</div>
+            <h2 style="color:#2ecc71;font-size:18px;margin-bottom:16px">领取成功！</h2>
+            <div class="label">📎 下载链接</div>
+            <div class="value" id="linkDisplay"></div>
+            <div id="extractSection" style="display:none">
+                <div class="label">🔑 提取码</div>
+                <div class="value" id="extractDisplay"></div>
+            </div>
+            <button class="copy-btn" onclick="copyLink()">📋 复制链接</button>
+            <p class="hint" style="margin-top:12px">链接永久有效，请及时保存到自己的网盘</p>
+        </div>
+
+        <div id="errorArea" class="error"></div>
+    </div>
+
+    <script>
+        let products = [];
+        let currentProduct = null;
+
+        async function loadProducts() {
+            try {
+                const res = await fetch('/api/products/public');
+                products = await res.json();
+                const sel = document.getElementById('productSelect');
+                sel.innerHTML = '<option value="">请选择...</option>' +
+                    products.map(p => `<option value="${p.id}" data-mode="${p.verifyMode}">${p.name}</option>`).join('');
+            } catch(e) {
+                document.getElementById('errorArea').textContent = '无法加载商品列表，请刷新重试';
+                document.getElementById('errorArea').classList.add('show');
+            }
+        }
+
+        function onProductChange() {
+            const sel = document.getElementById('productSelect');
+            const id = sel.value;
+            if (!id) {
+                document.getElementById('verifyArea').style.display = 'none';
+                currentProduct = null;
+                return;
+            }
+            currentProduct = products.find(p => p.id === id);
+            if (!currentProduct) return;
+
+            document.getElementById('verifyArea').style.display = 'block';
+            document.getElementById('codeInput').value = '';
+            document.getElementById('resultArea').classList.remove('show');
+            document.getElementById('errorArea').classList.remove('show');
+
+            const mode = currentProduct.verifyMode || 'simple';
+            const hint = document.getElementById('modeHint');
+            const label = document.getElementById('inputLabel');
+            const input = document.getElementById('codeInput');
+
+            if (mode === 'order') {
+                hint.innerHTML = '🔒 <strong>订单号验证模式</strong>：输入您在闲鱼/淘宝的订单号后8位（每个订单号仅限使用一次）';
+                label.textContent = '订单号后8位';
+                input.placeholder = '输入订单号后8位数字';
+                input.maxLength = 12;
+                input.inputMode = 'numeric';
+            } else if (mode === 'code') {
+                hint.innerHTML = '🔑 <strong>取货码模式</strong>：输入卖家发给您的取货码（如 ABC12345）';
+                label.textContent = '取货码';
+                input.placeholder = '输入取货码';
+                input.maxLength = 20;
+                input.inputMode = 'text';
+            } else {
+                hint.innerHTML = '🔓 <strong>简单模式</strong>：点击下方按钮即可领取（每人每天限领10次）';
+                label.textContent = '验证信息（选填）';
+                input.placeholder = '可不填，直接点击领取';
+                input.maxLength = 20;
+            }
+        }
+
+        async function claim() {
+            if (!currentProduct) { showError('请先选择商品'); return; }
+
+            const mode = currentProduct.verifyMode || 'simple';
+            const code = document.getElementById('codeInput').value.trim();
+
+            if (mode !== 'simple' && !code) { showError('请输入验证信息'); return; }
+
+            document.getElementById('claimBtn').disabled = true;
+            document.getElementById('claimBtn').innerHTML = '<span class="spinner"></span>验证中...';
+            document.getElementById('errorArea').classList.remove('show');
+
+            try {
+                const res = await fetch('/api/claim', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productName: currentProduct.name, code: code || 'auto' })
+                });
+                const data = await res.json();
+
+                if (data.ok) {
+                    document.getElementById('stepForm').style.display = 'none';
+                    document.getElementById('linkDisplay').textContent = data.link;
+                    if (data.extractCode) {
+                        document.getElementById('extractSection').style.display = 'block';
+                        document.getElementById('extractDisplay').textContent = data.extractCode;
+                    }
+                    document.getElementById('resultArea').classList.add('show');
+                } else {
+                    showError(data.msg || '领取失败，请重试');
+                }
+            } catch(e) {
+                showError('网络错误，请稍后重试');
+            }
+
+            document.getElementById('claimBtn').disabled = false;
+            document.getElementById('claimBtn').textContent = '领取资料';
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorArea');
+            el.textContent = msg;
+            el.classList.add('show');
+        }
+
+        function copyLink() {
+            const text = document.getElementById('linkDisplay').textContent;
+            const ext = document.getElementById('extractDisplay');
+            const full = ext ? text + '  提取码：' + ext.textContent : text;
+            navigator.clipboard.writeText(full).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                btn.textContent = '✅ 已复制';
+                setTimeout(() => btn.textContent = '📋 复制链接', 2000);
+            });
+        }
+
+        loadProducts();
+    </script>
+</body>
+</html>
