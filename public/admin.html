@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自动取货系统 - 管理后台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #0a0a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        /* ===== 登录 ===== */
+        .login-screen {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100vh; padding: 20px;
+        }
+        .login-card {
+            background: #1a1a2e; border-radius: 16px; padding: 40px;
+            max-width: 400px; width: 100%; text-align: center;
+            border: 1px solid #2a2a3e;
+        }
+        .login-card h1 { font-size: 22px; margin-bottom: 8px; }
+        .login-card p { color: #666; font-size: 13px; margin-bottom: 24px; }
+        .login-card input { width: 100%; padding: 12px; background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 8px; color: #fff; font-size: 15px; outline: none; margin-bottom: 12px; }
+        .login-card input:focus { border-color: #6c5ce7; }
+        .login-card .btn { width: 100%; padding: 12px; background: #6c5ce7; border: none; border-radius: 8px; color: #fff; font-size: 15px; cursor: pointer; }
+        .login-card .btn:hover { background: #5b4bd5; }
+        .login-card .error { color: #e74c3c; font-size: 13px; margin-top: 8px; }
+
+        /* ===== 后台布局 ===== */
+        .admin-wrap { display: none; max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+        .top-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px; background: #1a1a2e; border-radius: 12px;
+            border: 1px solid #2a2a3e; margin-bottom: 20px;
+        }
+        .top-bar h1 { font-size: 18px; }
+        .top-bar .stats { color: #888; font-size: 13px; }
+        .top-bar .logout { background: transparent; border: 1px solid #444; color: #888; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        .top-bar .logout:hover { border-color: #e74c3c; color: #e74c3c; }
+
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+        .tab {
+            padding: 10px 20px; background: #1a1a2e; border: 1px solid #2a2a3e;
+            border-radius: 8px; color: #888; cursor: pointer; font-size: 13px; flex: 1; text-align: center;
+        }
+        .tab:hover { background: #2a2a3e; }
+        .tab.active { background: #6c5ce7; color: #fff; border-color: #6c5ce7; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .card {
+            background: #1a1a2e; border-radius: 12px; padding: 20px;
+            border: 1px solid #2a2a3e; margin-bottom: 20px;
+        }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .card-header h2 { font-size: 16px; }
+
+        /* ===== 按钮 ===== */
+        .btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .btn-primary { background: #6c5ce7; color: #fff; }
+        .btn-primary:hover { background: #5b4bd5; }
+        .btn-secondary { background: #2a2a3e; color: #b0b0b0; }
+        .btn-secondary:hover { background: #3a3a4e; }
+        .btn-danger { background: #e74c3c; color: #fff; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .btn-icon { padding: 6px 10px; font-size: 14px; background: #2a2a3e; color: #b0b0b0; border-radius: 6px; }
+        .btn-icon:hover { background: #3a3a4e; }
+
+        /* ===== 商品列表 ===== */
+        .product-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 0; border-bottom: 1px solid #2a2a3e;
+        }
+        .product-item:last-child { border-bottom: none; }
+        .product-info { flex: 1; }
+        .product-info .name { font-size: 15px; font-weight: 600; }
+        .product-info .meta { font-size: 12px; color: #666; margin-top: 4px; }
+        .product-info .link { font-size: 11px; color: #444; word-break: break-all; margin-top: 2px; }
+        .product-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+        /* ===== 取货码 ===== */
+        .gen-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+        .gen-row select, .gen-row input { flex: 1; padding: 10px; background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 8px; color: #fff; font-size: 13px; outline: none; }
+        .gen-row input { max-width: 100px; }
+
+        .code-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+        .code-tag {
+            padding: 6px 12px; background: #2a2a3e; border-radius: 6px;
+            font-family: monospace; font-size: 13px; cursor: pointer;
+        }
+        .code-tag:hover { background: #3a3a5e; }
+        .code-tag.used { opacity: 0.4; text-decoration: line-through; }
+
+        .filter-row { display: flex; gap: 8px; margin-bottom: 12px; }
+        .filter-row select { padding: 8px; background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 6px; color: #b0b0b0; font-size: 12px; outline: none; }
+
+        /* ===== 弹窗 ===== */
+        .modal {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: #1a1a2e; border-radius: 12px; padding: 24px;
+            width: 100%; max-width: 460px; border: 1px solid #2a2a3e;
+        }
+        .modal-content h2 { font-size: 18px; margin-bottom: 16px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 8px; color: #fff; font-size: 14px; outline: none; }
+        .form-group input:focus, .form-group select:focus { border-color: #6c5ce7; }
+        .form-group select option { background: #1a1a2e; }
+        .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+        .modal .error { color: #e74c3c; font-size: 13px; margin-top: 8px; }
+
+        /* ===== 领取记录表 ===== */
+        .claims-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .claims-table th { text-align: left; padding: 8px 10px; color: #666; border-bottom: 1px solid #2a2a3e; font-weight: normal; }
+        .claims-table td { padding: 8px 10px; border-bottom: 1px solid #2a2a3e; }
+        .claims-table tr:hover { background: rgba(108,92,231,0.05); }
+
+        .empty { color: #555; text-align: center; padding: 40px; font-size: 14px; }
+        .loading { color: #666; text-align: center; padding: 20px; }
+
+        /* ===== 成功提示 ===== */
+        .success-banner { background: rgba(46,204,113,0.1); border: 1px solid rgba(46,204,113,0.3); border-radius: 8px; padding: 12px; color: #2ecc71; font-size: 13px; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+    <!-- 登录 -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-card">
+            <h1>🔐 管理后台</h1>
+            <p>自动取货系统 v2</p>
+            <input type="password" id="loginPwd" placeholder="管理员密码" onkeydown="if(event.key==='Enter')login()">
+            <button class="btn" onclick="login()">登录</button>
+            <p id="loginError" class="error"></p>
+        </div>
+    </div>
+
+    <!-- 后台 -->
+    <div id="adminScreen" class="admin-wrap">
+        <div class="top-bar">
+            <div>
+                <h1>📦 自动取货系统</h1>
+                <div class="stats" id="statsBar">加载中...</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <span style="color:#666;font-size:12px" id="onlineStatus">⚪ 本地运行</span>
+                <button class="logout" onclick="logout()">退出</button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('products')">📋 商品管理</div>
+            <div class="tab" onclick="switchTab('codes')">🔑 取货码</div>
+            <div class="tab" onclick="switchTab('claims')">📊 领取记录</div>
+            <div class="tab" onclick="switchTab('about')">ℹ️ 关于</div>
+        </div>
+
+        <!-- 商品管理 -->
+        <div id="tabProducts" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <h2>商品列表</h2>
+                    <button class="btn btn-primary" onclick="showAddProduct()">+ 添加商品</button>
+                </div>
+                <div id="productList"><p class="loading">加载中...</p></div>
+            </div>
+        </div>
+
+        <!-- 取货码 -->
+        <div id="tabCodes" class="tab-content">
+            <div class="card">
+                <div class="card-header"><h2>生成取货码</h2></div>
+                <div class="gen-row">
+                    <select id="codeProductSelect"><option value="">-- 请先添加商品 --</option></select>
+                    <input type="number" id="codeCount" value="10" min="1" max="1000">
+                    <button class="btn btn-primary" onclick="generateCodes()">生成</button>
+                </div>
+                <div id="codeGenResult"></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h2>取货码列表</h2></div>
+                <div class="filter-row">
+                    <select id="filterProduct" onchange="loadCodes()"><option value="">全部商品</option></select>
+                    <select id="filterStatus" onchange="loadCodes()"><option value="">全部状态</option><option value="false">未使用</option><option value="true">已使用</option></select>
+                    <button class="btn btn-secondary btn-sm" onclick="loadCodes()">刷新</button>
+                </div>
+                <div id="codeList"><p class="loading">加载中...</p></div>
+            </div>
+        </div>
+
+        <!-- 领取记录 -->
+        <div id="tabClaims" class="tab-content">
+            <div class="card">
+                <div class="card-header"><h2>领取记录</h2><button class="btn btn-secondary btn-sm" onclick="loadClaims()">刷新</button></div>
+                <div id="claimsList"><p class="loading">加载中...</p></div>
+            </div>
+        </div>
+
+        <!-- 关于 -->
+        <div id="tabAbout" class="tab-content">
+            <div class="card">
+                <h2 style="margin-bottom:12px">ℹ️ 关于自动取货系统</h2>
+                <div style="color:#888;font-size:14px;line-height:2">
+                    <p><strong>自动取货系统 v2</strong> 是一个让虚拟商品买家自助取货的工具。</p>
+                    <p>卖家只需添加商品 → 买家付款后自己来取 → 卖家零操作。</p>
+                    <br>
+                    <p><strong>三种验证模式：</strong></p>
+                    <p>🔓 <strong>简单模式</strong>：直接领取，有IP频率限制（适合不在意分享的商品）</p>
+                    <p>🔑 <strong>取货码模式</strong>：预生成取货码，买家输入验证（适合需要限量领取的）</p>
+                    <p>🔒 <strong>订单号模式</strong>：输入订单号后8位验证，每个订单仅限一次（推荐）</p>
+                    <br>
+                    <p><strong>为什么用这个：</strong></p>
+                    <p>• 替代闲管家，省198元/年</p>
+                    <p>• 替代淘宝自动发货插件，省月费</p>
+                    <p>• 数据在你自己服务器，安全可控</p>
+                    <p>• 零依赖部署，node server.js 即用</p>
+                    <br>
+                    <p><strong>启动方式：</strong> <code style="background:#0f0f1a;padding:2px 8px;border-radius:4px">node server.js</code></p>
+                    <p><strong>默认端口：</strong> 3000</p>
+                    <p><strong>管理员密码：</strong> 在 server.js 顶部修改</p>
+                    <br>
+                    <p style="color:#555">💡 部署到公网后，记得改密码和端口。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/编辑商品弹窗 -->
+    <div id="productModal" class="modal" style="display:none">
+        <div class="modal-content">
+            <h2 id="modalTitle">添加商品</h2>
+            <div class="form-group">
+                <label>商品名称 *</label>
+                <input type="text" id="pName" placeholder="如：修仙家族模拟器2">
+            </div>
+            <div class="form-group">
+                <label>网盘下载链接 *</label>
+                <input type="text" id="pLink" placeholder="如：https://pan.baidu.com/s/xxx">
+            </div>
+            <div class="form-group">
+                <label>提取码（选填）</label>
+                <input type="text" id="pExtract" placeholder="如：ekiw">
+            </div>
+            <div class="form-group">
+                <label>售价（元，统计用）</label>
+                <input type="number" id="pPrice" placeholder="9.9" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>验证模式</label>
+                <select id="pMode">
+                    <option value="order">🔒 订单号模式（推荐）— 买家输入订单号后8位验证</option>
+                    <option value="code">🔑 取货码模式 — 预生成取货码，买家输入验证</option>
+                    <option value="simple">🔓 简单模式 — 直接领取（有IP频率限制）</option>
+                </select>
+            </div>
+            <p id="productError" class="error" style="display:none"></p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveProduct()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let products = [];
+        let editId = null;
+
+        // ===== 登录 =====
+        async function login() {
+            const pwd = document.getElementById('loginPwd').value;
+            if (!pwd) { document.getElementById('loginError').textContent = '请输入密码'; return; }
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pwd })
+                });
+                if (res.ok) {
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('adminScreen').style.display = 'block';
+                    init();
+                } else {
+                    document.getElementById('loginError').textContent = '密码错误';
+                }
+            } catch(e) {
+                document.getElementById('loginError').textContent = '无法连接服务器';
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            location.reload();
+        }
+
+        // ===== 初始化 =====
+        async function init() {
+            await loadStats();
+            await loadProducts();
+            await loadCodes();
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const d = await res.json();
+                document.getElementById('statsBar').textContent =
+                    `📊 ${d.totalProducts}个商品 · ${d.totalUsed}次领取 · 预估收入 ¥${d.totalRevenue}`;
+            } catch(e) {}
+        }
+
+        function switchTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+            document.querySelector(`.tab[onclick*='${name}']`).classList.add('active');
+            if (name === 'codes') loadCodes();
+            if (name === 'claims') loadClaims();
+        }
+
+        // ===== 商品管理 =====
+        async function loadProducts() {
+            try {
+                const res = await fetch('/api/products');
+                products = await res.json();
+                renderProducts();
+                populateSelects();
+            } catch(e) {
+                document.getElementById('productList').innerHTML = '<p class="loading">加载失败</p>';
+            }
+        }
+
+        function renderProducts() {
+            const el = document.getElementById('productList');
+            if (!products.length) { el.innerHTML = '<p class="empty">暂无商品，点击上方添加</p>'; return; }
+            el.innerHTML = products.map(p => `
+                <div class="product-item">
+                    <div class="product-info">
+                        <div class="name">${p.name} ${p.enabled === false ? '<span style="color:#e74c3c;font-size:11px">[已下架]</span>' : ''}</div>
+                        <div class="meta">💰 ¥${p.price || 0} · ${p.usedCount || 0}次领取 · 模式:${p.verifyMode || 'simple'}</div>
+                        <div class="link">${(p.link || '').substring(0, 60)}${(p.link||'').length > 60 ? '…' : ''}</div>
+                    </div>
+                    <div class="product-actions">
+                        <button class="btn-icon" onclick="editProduct('${p.id}')" title="编辑">✏️</button>
+                        <button class="btn-icon" onclick="toggleProduct('${p.id}')" title="${p.enabled === false ? '上架' : '下架'}">${p.enabled === false ? '▶️' : '⏸️'}</button>
+                        <button class="btn-icon" onclick="deleteProduct('${p.id}')" title="删除" style="color:#e74c3c">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function populateSelects() {
+            const opts = products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            document.getElementById('codeProductSelect').innerHTML = '<option value="">-- 选择商品 --</option>' + opts;
+            document.getElementById('filterProduct').innerHTML = '<option value="">全部商品</option>' + opts;
+        }
+
+        function showAddProduct() {
+            editId = null; document.getElementById('modalTitle').textContent = '添加商品';
+            ['pName','pLink','pExtract'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('pPrice').value = '';
+            document.getElementById('pMode').value = 'order';
+            document.getElementById('productError').style.display = 'none';
+            document.getElementById('productModal').style.display = 'flex';
+        }
+
+        function editProduct(id) {
+            const p = products.find(x => x.id === id); if (!p) return;
+            editId = id; document.getElementById('modalTitle').textContent = '编辑商品';
+            document.getElementById('pName').value = p.name;
+            document.getElementById('pLink').value = p.link;
+            document.getElementById('pExtract').value = p.extractCode || '';
+            document.getElementById('pPrice').value = p.price || '';
+            document.getElementById('pMode').value = p.verifyMode || 'order';
+            document.getElementById('productError').style.display = 'none';
+            document.getElementById('productModal').style.display = 'flex';
+        }
+
+        async function saveProduct() {
+            const name = document.getElementById('pName').value.trim();
+            const link = document.getElementById('pLink').value.trim();
+            if (!name || !link) {
+                document.getElementById('productError').textContent = '名称和链接必填';
+                document.getElementById('productError').style.display = 'block'; return;
+            }
+            const data = {
+                name, link,
+                extractCode: document.getElementById('pExtract').value.trim(),
+                price: parseFloat(document.getElementById('pPrice').value) || 0,
+                verifyMode: document.getElementById('pMode').value
+            };
+            try {
+                const url = editId ? '/api/products/' + editId : '/api/products';
+                const method = editId ? 'PUT' : 'POST';
+                const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                if (res.ok) { closeModal(); await loadProducts(); await loadStats(); }
+                else { const d = await res.json(); document.getElementById('productError').textContent = d.error; document.getElementById('productError').style.display = 'block'; }
+            } catch(e) { document.getElementById('productError').textContent = '网络错误'; document.getElementById('productError').style.display = 'block'; }
+        }
+
+        async function toggleProduct(id) {
+            const p = products.find(x => x.id === id); if (!p) return;
+            await fetch('/api/products/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: p.enabled === false ? true : false }) });
+            await loadProducts();
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('确定删除该商品？')) return;
+            await fetch('/api/products/' + id, { method: 'DELETE' });
+            await loadProducts(); await loadStats();
+        }
+
+        function closeModal() { document.getElementById('productModal').style.display = 'none'; }
+
+        // ===== 取货码 =====
+        async function generateCodes() {
+            const pid = document.getElementById('codeProductSelect').value;
+            const count = parseInt(document.getElementById('codeCount').value) || 10;
+            if (!pid) { alert('请选择商品'); return; }
+            const res = await fetch('/api/codes/generate', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId: pid, count })
+            });
+            const data = await res.json();
+            const el = document.getElementById('codeGenResult');
+            if (data.generated) {
+                el.innerHTML = `<div class="success-banner">✅ 成功生成 ${data.total} 个取货码（点击复制）</div>
+                    <div class="code-list">${data.generated.map(c => `<span class="code-tag" onclick="copyCode('${c.code}')">${c.code}</span>`).join('')}</div>`;
+                await loadStats();
+            }
+        }
+
+        function copyCode(code) { navigator.clipboard.writeText(code).then(() => alert('已复制：' + code)); }
+
+        async function loadCodes() {
+            const pid = document.getElementById('filterProduct')?.value || '';
+            const u = document.getElementById('filterStatus')?.value || '';
+            try {
+                let url = '/api/codes?limit=500';
+                if (pid) url += '&productId=' + pid;
+                if (u) url += '&used=' + u;
+                const res = await fetch(url);
+                const codes = await res.json();
+                const el = document.getElementById('codeList');
+                if (!codes.length) { el.innerHTML = '<p class="empty">暂无取货码</p>'; return; }
+                el.innerHTML = `<div class="code-list">${codes.map(c => `
+                    <span class="code-tag ${c.used ? 'used' : ''}" onclick="copyCode('${c.code}')" title="${c.used ? '已使用' : '未使用'} ${c.productName}">${c.code}</span>
+                `).join('')}</div>`;
+            } catch(e) { document.getElementById('codeList').innerHTML = '<p class="loading">加载失败</p>'; }
+        }
+
+        // ===== 领取记录 =====
+        async function loadClaims() {
+            try {
+                const res = await fetch('/api/claims');
+                const claims = await res.json();
+                const el = document.getElementById('claimsList');
+                if (!claims.length) { el.innerHTML = '<p class="empty">暂无领取记录</p>'; return; }
+                el.innerHTML = `<table class="claims-table">
+                    <thead><tr><th>商品</th><th>验证信息</th><th>时间</th><th>IP</th></tr></thead>
+                    <tbody>${claims.map(c => `<tr>
+                        <td>${c.productId ? (products.find(p => p.id === c.productId)?.name || '-') : '-'}</td>
+                        <td style="font-family:monospace;font-size:11px">${c.code || '-'}</td>
+                        <td>${new Date(c.time).toLocaleString()}</td>
+                        <td style="color:#666">${c.ip || '-'}</td>
+                    </tr>`).join('')}</tbody>
+                </table>`;
+            } catch(e) { document.getElementById('claimsList').innerHTML = '<p class="loading">加载失败</p>'; }
+        }
+    </script>
+</body>
+</html>
